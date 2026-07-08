@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgiL - Generador de Facturas</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0e12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-512.jpg">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registrado con exito:', reg.scope))
+        .catch(err => console.error('Error al registrar Service Worker:', err));
+    });
+  }
+</script>
+</head>
+<body class="accent-indigo">
+
+<div class="app-layout">
+
+  <!-- BARRA LATERAL (SIDEBAR) -->
+  <aside class="sidebar">
+    
+    <!-- Espacio para el logotipo -->
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="1" width="10" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="5" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="5" y1="11" x2="9" y2="11" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-brand">AgiL</span>
+        <span class="logo-subtitle">Invoices</span>
+      </div>
+    </div>
+
+    <!-- Menú de Navegación Completo (Sincronizado con renderer.js) -->
+    <nav class="sidebar-nav">
+      <button class="sidebar-btn active" id="sideDashboard" onclick="navigateMenu('dashboard')">
+        <span class="sidebar-btn-content">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          <span id="lbl_menu_dashboard">Dashboard</span>
+        </span>
+      </button>
+      <button class="sidebar-btn" id="sideInvoice" onclick="navigateMenu('invoice')">
+        <span class="sidebar-btn-content">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span id="lbl_menu_new_invoice">Nueva Factura</span>
+        </span>
+      </button>
+
+      <div class="sidebar-item-group">
+        <button class="sidebar-btn" id="sideClients" onclick="toggleSubmenu('clients'); navigateMenu('clients');">
+          <span class="sidebar-btn-content">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span id="lbl_menu_clients">Clientes</span>
+          </span>
+          <svg class="submenu-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="sidebar-submenu" id="submenuClients"></div>
+      </div>
+
+      <div class="sidebar-item-group">
+        <button class="sidebar-btn" id="sideProfile" onclick="toggleSubmenu('profile'); navigateMenu('profile');">
+          <span class="sidebar-btn-content">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span id="lbl_menu_profile">Perfil Emisor</span>
+          </span>
+          <svg class="submenu-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="sidebar-submenu" id="submenuProfile"></div>
+      </div>
+
+      <button class="sidebar-btn" id="sideExpenses" onclick="navigateMenu('expenses')">
+        <span class="sidebar-btn-content">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          <span id="lbl_menu_expenses">Registrar Salida</span>
+        </span>
+      </button>
+      <button class="sidebar-btn" id="sideHistory" onclick="navigateMenu('history')">
+        <span class="sidebar-btn-content">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span id="lbl_menu_history">Historial</span>
+        </span>
+      </button>
+      <button class="sidebar-btn" id="sideSettings" onclick="navigateMenu('settings')">
+        <span class="sidebar-btn-content">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span id="lbl_menu_settings">Configuraciones</span>
+        </span>
+      </button>
+    </nav>
+
+    <!-- Panel de Personalización (Modo Oscuro & Acentos) -->
+    <div class="sidebar-footer">
+      <div class="customizer-section">
+        
+        <!-- Toggle Modo Oscuro -->
+        <div class="theme-switch-row">
+          <span class="customizer-label">Modo Oscuro</span>
+          <button class="theme-toggle-btn" id="btnThemeToggle" onclick="toggleTheme()" title="Cambiar Tema">
+            <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+        </div>
+
+        <!-- Paleta de Colores de Acento -->
+        <div class="accent-colors-row">
+          <span class="customizer-label">Color de Acento</span>
+          <div class="accent-palette">
+            <button class="accent-color-btn color-indigo active" id="btnAccent_indigo" onclick="selectAccent('indigo')" title="Índigo"></button>
+            <button class="accent-color-btn color-emerald" id="btnAccent_emerald" onclick="selectAccent('emerald')" title="Esmeralda"></button>
+            <button class="accent-color-btn color-amber" id="btnAccent_amber" onclick="selectAccent('amber')" title="Ámbar"></button>
+            <button class="accent-color-btn color-cobalt" id="btnAccent_cobalt" onclick="selectAccent('cobalt')" title="Cobalto"></button>
+            <button class="accent-color-btn color-rose" id="btnAccent_rose" onclick="selectAccent('rose')" title="Rosa"></button>
+            <button class="accent-color-btn color-violet" id="btnAccent_violet" onclick="selectAccent('violet')" title="Violeta"></button>
+            <button class="accent-color-btn color-carbon" id="btnAccent_carbon" onclick="selectAccent('carbon')" title="Carbón"></button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="main-content">
+    <div class="content-container">
+
+      <!-- PÁGINA 1: DASHBOARD -->
+      <section class="view active" id="dashboardPage">
+        <!-- Elemento de anclaje para scroll al Dashboard -->
+        <div id="dashboardTop"></div>
+        
+        <!-- Cabecera de Acción en Dashboard -->
+        <div class="dashboard-header-actions">
+          <h2 class="dashboard-header-title">Panel de Control</h2>
+          <button class="btn-primary" onclick="startNewInvoiceFromDashboard()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nueva Factura
+          </button>
+        </div>
+
+        <!-- Rejilla de KPI Interactiva -->
+        <div class="dashboard-grid">
+          <div class="stat-box" onclick="handleKpiClick('invoices')">
+            <div class="stat-label">Facturas</div>
+            <div class="stat-value" id="dashboardInvoices">0</div>
+          </div>
+          <div class="stat-box" onclick="handleKpiClick('clients')">
+            <div class="stat-label">Clientes</div>
+            <div class="stat-value" id="dashboardClients">0</div>
+          </div>
+          <div class="stat-box" onclick="handleKpiClick('revenue')">
+            <div class="stat-label">Ingresos</div>
+            <div class="stat-value" id="dashboardRevenue">$0.00</div>
+          </div>
+          <div class="stat-box" onclick="handleKpiClick('expenses')">
+            <div class="stat-label">Gastos</div>
+            <div class="stat-value" id="dashboardExpenses">$0.00</div>
+          </div>
+          <div class="stat-box" onclick="handleKpiClick('balance')">
+            <div class="stat-label">Balance Neto</div>
+            <div class="stat-value" id="dashboardBalance">$0.00</div>
+          </div>
+        </div>
+
+        <!-- Panel de Detalle Rápido de KPIs (Dashboard) -->
+        <div class="card" id="kpiDetailPanel" style="display: none; margin-bottom: 1.5rem; animation: slideDownSubmenu 0.2s ease-out;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <div class="section-label" id="kpiDetailTitle" style="margin-bottom: 0; flex-grow: 1;">Detalles</div>
+            <button class="btn-small" onclick="closeKpiDetail()" style="padding: 4px 8px;">Cerrar</button>
+          </div>
+          <div id="kpiDetailContent"></div>
+        </div>
+
+        <!-- Tarjeta de Gráfico de Balance -->
+        <div class="card">
+          <div class="section-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            Rendimiento y Balance Mensual
+          </div>
+          <div class="chart-container">
+            <canvas id="balanceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grid de Contenido Principal (Registrar Egresos y feeds de transacciones) -->
+        <div class="grid2">
+          
+          <!-- Registrar Salida -->
+          <div class="card" id="expenseSection">
+            <div class="section-label">Registrar Salida</div>
+            <div class="grid2" style="margin-bottom:8px;">
+              <div class="field"><label>Fecha</label><input id="expenseDate" type="date"></div>
+              <div class="field"><label>Categoría</label><input id="expenseCategory" placeholder="Materiales, transporte..."></div>
+            </div>
+            <div class="field"><label>Monto ($)</label><input id="expenseAmount" type="number" step="0.01" placeholder="0.00"></div>
+            <div class="field"><label>Descripción</label><input id="expenseDescription" placeholder="Detalle de la salida"></div>
+            <div class="field"><label>Notas</label><input id="expenseNotes" placeholder="Opcional"></div>
+            <div class="inline-actions" style="margin-top:12px;">
+              <button class="btn-primary" style="width:100%;" onclick="saveExpenseFromDashboard()">Guardar salida</button>
+              <button class="btn-secondary" style="width:100%;" onclick="clearExpenseForm()">Limpiar</button>
+            </div>
+            <div class="status-msg" id="dashboardStatus"></div>
+          </div>
+
+          <!-- Resúmenes Recientes -->
+          <div class="card">
+            <div class="section-label">Facturas Recientes</div>
+            <div class="money-list" id="dashboardRecentInvoices" style="max-height: 220px; overflow-y: auto;"></div>
+            
+            <div class="section-label" style="margin-top:20px;">Salidas Recientes</div>
+            <div class="money-list" id="expenseList" style="max-height: 220px; overflow-y: auto;"></div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- PÁGINA 2: FACTURACIÓN -->
+      <section class="view" id="invoicePage">
+        
+        <!-- Cabecera de Página de Facturación -->
+        <div class="page-back-nav" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <button class="btn-secondary" onclick="showPage('dashboard')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Volver al Dashboard
+          </button>
+          <h2 style="font-size:18px; font-weight:700; margin:0;">Creador de Facturas</h2>
+        </div>
+
+        <!-- Grid de Cliente y Emisor -->
+        <div class="grid2">
+          
+          <!-- CLIENTE -->
+          <div class="card" id="clientSection">
+            <div class="section-label">Cliente / Receptor</div>
+            <div class="grid2">
+              <input type="hidden" id="clientId" value="">
+              <div class="field"><label>Nombre / Empresa</label><input id="clientName" value=""></div>
+              <div class="field"><label>Email</label><input id="clientEmail" value=""></div>
+              <div class="field"><label>Teléfono</label><input id="clientPhone" value=""></div>
+              <div class="field full"><label>Dirección</label><input id="clientAddress" value=""></div>
+              <div class="field full"><label>Notas</label><input id="clientNotes" value=""></div>
+            </div>
+            <div class="inline-actions" style="margin-top:12px;">
+              <button class="btn-primary" style="width:100%;" onclick="saveClientFromForm()">Guardar cliente</button>
+              <button class="btn-secondary" style="width:100%;" onclick="clearClientForm()">Nuevo cliente</button>
+            </div>
+            <div class="client-list" id="clientList" style="max-height: 140px; overflow-y: auto; margin-top: 10px;"></div>
+          </div>
+
+          <!-- EMISOR -->
+          <div class="card" id="profileSection">
+            <div class="section-label">Datos del Emisor</div>
+            <div class="grid2">
+              <div class="field"><label>Nombre / Empresa</label><input id="issuerName" placeholder="Tu empresa o nombre legal"></div>
+              <div class="field"><label>ABN / ID Fiscal</label><input id="issuerABN" placeholder="Ej: 12 345 678 901"></div>
+              <div class="field"><label>Teléfono</label><input id="issuerPhone" placeholder="+61 400 000 000"></div>
+              <div class="field"><label>Email</label><input id="issuerEmail" placeholder="correo@ejemplo.com"></div>
+              <div class="field full"><label>Dirección</label><input id="issuerAddress" placeholder="Dirección física o comercial"></div>
+            </div>
+            <div class="inline-actions" style="margin-top:12px;">
+              <button class="btn-primary" style="width:100%;" onclick="saveUserProfile()">Guardar perfil</button>
+              <button class="btn-secondary" style="width:100%;" onclick="loadUserProfile()">Cargar perfil</button>
+            </div>
+            <div class="status-msg" id="profileStatus"></div>
+          </div>
+
+
+
+        </div>
+
+        <!-- DATOS DE FACTURA & HISTORIAL -->
+        <div class="grid2">
+          
+          <!-- FACTURA GENERAL -->
+          <div class="card">
+            <div class="section-label">Datos de la Factura</div>
+            <div class="grid3">
+              <div class="field"><label>Número</label><input id="invNumber" value=""></div>
+              <div class="field"><label>Fecha</label><input id="invDate" type="date" value=""></div>
+              <div class="field"><label>Vencimiento</label><input id="invDue" type="date" value=""></div>
+            </div>
+          </div>
+
+          <!-- RESPALDOS Y HISTORIAL -->
+          <div class="card" id="historySection">
+            <div class="section-label">Historial de Facturas</div>
+            <div class="history-toolbar">
+              <input id="historySearch" placeholder="Buscar..." oninput="renderHistory()">
+              <button class="btn-secondary" style="font-size:11px;padding:8px;" onclick="exportHistory()">Exportar</button>
+              <button class="btn-secondary" style="font-size:11px;padding:8px;" onclick="document.getElementById('historyFile').click()">Importar</button>
+              <input class="file-input" id="historyFile" type="file" accept=".json,application/json" onchange="importHistory(event)">
+            </div>
+            <div class="history-list" id="historyList" style="max-height: 120px; overflow-y: auto;"></div>
+            <div class="status-msg" id="historyStatus"></div>
+          </div>
+
+        </div>
+
+        <!-- CALCULADORA RÁPIDA -->
+        <div class="card">
+          <div class="section-label">Calculadora rápida de servicios</div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            Suma unidades y precios unitarios. Se aplica como un único ítem con cantidad 1 en la factura final.
+          </p>
+          <div class="field full" style="margin-bottom:12px;">
+            <label>Descripción para el ítem final</label>
+            <input id="calcDesc" placeholder="Ej: Servicios profesionales prestados">
+          </div>
+          <table class="calc-table">
+            <thead>
+              <tr>
+                <th class="col-calc-qty">Unidades</th>
+                <th class="col-calc-price">Precio Unit.</th>
+                <th class="col-calc-total">Total</th>
+                <th class="col-calc-del"></th>
+              </tr>
+            </thead>
+            <tbody id="calcBody"></tbody>
+          </table>
+          <div class="calc-actions">
+            <button class="btn-secondary" onclick="addCalcLine()">+ Agregar cálculo</button>
+            <button class="btn-primary" onclick="applyCalculatedTotal()">Aplicar a la factura</button>
+          </div>
+          <div class="calc-result" style="margin-top:12px; font-weight:700;">
+            <span class="lbl">Total calculado: </span>
+            <span class="val" id="calcTotal">$0.00</span>
+          </div>
+        </div>
+
+        <!-- ITEMS FACTURA -->
+        <div class="card">
+          <div class="section-label">Detalle de Ítems / Servicios</div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="col-desc">Descripción</th>
+                <th class="col-qty">Cant.</th>
+                <th class="col-price">Precio Unit.</th>
+                <th class="col-amt">Monto</th>
+                <th class="col-del"></th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+          <button class="btn-add" onclick="addItem()">+ Agregar ítem</button>
+          <div class="totals">
+            <div class="total-row"><span class="lbl">Subtotal</span><span class="val" id="subtotal">$0.00</span></div>
+            <div class="total-row grand"><span class="lbl">Total Factura</span><span class="val" id="total">$0.00</span></div>
+          </div>
+        </div>
+
+        <!-- PAGO -->
+        <div class="card">
+          <div class="section-label">Instrucciones de Pago</div>
+          <div class="grid2">
+            <div class="field"><label>Banco</label><input id="payBank" placeholder="Ej: Commonwealth Bank"></div>
+            <div class="field"><label>BSB / Routing number</label><input id="payBSB" placeholder="Ej: 064-000"></div>
+            <div class="field"><label>Número de Cuenta</label><input id="payAcc" placeholder="Ej: 1234-5678"></div>
+            <div class="field"><label>Mensaje final</label><input id="payMsg" placeholder="Ej: Gracias por su preferencia."></div>
+          </div>
+        </div>
+
+        <!-- OPCIONES DE ENVÍO POR CORREO -->
+        <div class="card">
+          <div class="section-label">Opciones de Envío</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="sendRequestReceipt" style="width:auto; margin:0;" checked>
+              <label for="sendRequestReceipt" style="margin:0; font-size:13px; cursor:pointer;">Solicitar confirmación de lectura al cliente (Read Receipt)</label>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:4px;">
+              <button class="btn-primary" style="flex:1; padding:12px; font-weight:700;" onclick="sendInvoiceEmailAction()">
+                📧 Enviar al Cliente por Correo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTONES DE ACCIÓN PRINCIPALES -->
+        <div class="grid3" style="margin-bottom: 2rem;">
+          <button class="btn-primary" style="padding:14px;" onclick="saveInvoice()">Guardar Factura</button>
+          <button class="btn-secondary" style="padding:14px;" onclick="newInvoice()">Nueva Factura</button>
+          <button class="btn-secondary" style="padding:14px;" onclick="updatePreview()">Actualizar Vista Previa</button>
+        </div>
+
+        <!-- VISTA PREVIA (INVOICE ORIGINAL PREV) -->
+        <div class="preview-wrap" id="previewWrap">
+          <div class="preview-lbl">Vista Previa del PDF</div>
+
+          <div class="invoice" id="invCard">
+            <div class="deco-circle"></div>
+            <div class="inv-bg-text" id="bgText">Invoice</div>
+
+            <div class="inv-top">
+              <div class="inv-to-block">
+                <div class="inv-to-name" id="p_clientName"></div>
+                <div id="p_clientEmail"></div>
+                <div id="p_clientPhone"></div>
+              </div>
+
+              <div class="inv-brand">
+                <div id="previewLogoContainer" style="margin-bottom: 8px;"></div>
+                <div class="inv-brand-name" id="p_issuerName">Emisor</div>
+                <div class="inv-meta-grid">
+                  <div>
+                    <div class="inv-meta-lbl">ABN</div>
+                    <div class="inv-meta-val" id="p_abn"></div>
+                  </div>
+                  <div>
+                    <div class="inv-meta-lbl">Due Date</div>
+                    <div class="inv-meta-val" id="p_due"></div>
+                  </div>
+                  <div>
+                    <div class="inv-meta-lbl">Date</div>
+                    <div class="inv-meta-val" id="p_date"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <table class="inv-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Quantity</th>
+                  <th>Unit Price</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody id="p_rows"></tbody>
+            </table>
+
+            <div class="inv-totals">
+              <table>
+                <tr><td>Subtotal</td><td id="p_sub">$0.00</td></tr>
+                <tr><td>Total</td><td id="p_total">$0.00</td></tr>
+              </table>
+            </div>
+
+            <div class="inv-bottom">
+              <div class="inv-payment">
+                <div class="inv-payment-title">Payment Instructions</div>
+                <div id="p_bank"></div>
+                <div>BSB <span id="p_bsb"></span></div>
+                <div>Acc Number <span id="p_acc"></span></div>
+                <div class="inv-thank" id="p_msg"></div>
+              </div>
+            </div>
+
+            <div class="inv-footer">
+              <span id="p_contact"></span>
+              <span id="p_address"></span>
+            </div>
+          </div>
+
+          <button class="btn-primary" style="width:100%; margin-top:15px; padding:12px;" id="btnDownloadPDF" onclick="downloadPDF()">
+            ⬇️ Descargar PDF en carpeta AgiL
+          </button>
+        </div>
+
+      </section>
+
+      <!-- PÁGINA 3: CONFIGURACIONES -->
+      <section class="view" id="settingsPage">
+        <div class="dashboard-header-actions" style="margin-bottom:1.5rem;">
+          <h2 class="dashboard-header-title" id="lbl_settings_title">Configuraciones Generales</h2>
+        </div>
+
+        <div class="grid2">
+          
+          <!-- IDIOMA E INTERFAZ -->
+          <div class="card">
+            <div class="section-label" id="lbl_settings_lang_section">Idioma de la Aplicación</div>
+            <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;" id="lbl_settings_lang_desc">
+              Selecciona el idioma de la interfaz del usuario. Esto cambiará también el contenido de los correos predeterminados.
+            </p>
+            <div class="field">
+              <label id="lbl_settings_lang_select">Seleccionar Idioma</label>
+              <select id="settingLanguage" onchange="changeLanguageAction()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-primary); outline:none;">
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- LOGO PERSONALIZADO -->
+          <div class="card">
+            <div class="section-label" id="lbl_settings_logo_section">Logotipo de Factura</div>
+            <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;" id="lbl_settings_logo_desc">
+              Sube una imagen (PNG o JPG) de tu logotipo. Se mostrará automáticamente en tus facturas.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+              <div id="logoPreviewContainer" style="width:120px; height:120px; border:2px dashed var(--border-color); border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--bg-input);">
+                <span style="font-size:11px; color:var(--text-secondary);" id="lbl_settings_no_logo">Sin Logo</span>
+              </div>
+              <div style="display:flex; gap:8px; width:100%;">
+                <button class="btn-secondary" style="flex:1; padding:8px; position:relative; overflow:hidden; font-size:12.5px; cursor:pointer;" id="lbl_settings_upload_btn">
+                  Cargar Imagen
+                  <input type="file" id="logoFileInput" accept="image/png, image/jpeg, image/jpg" onchange="uploadLogoAction(event)" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;">
+                </button>
+                <button class="btn-secondary danger" style="flex:1; padding:8px; font-size:12.5px;" id="lbl_settings_delete_logo_btn" onclick="deleteLogoAction()">
+                  Eliminar Logo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- GOOGLE SYNC & GMAIL API -->
+          <div class="card">
+            <div class="section-label" id="lbl_settings_google_section">Sincronización en la Nube</div>
+            <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;" id="lbl_settings_google_desc">
+              Conecta tu cuenta de Google para respaldar tus facturas en Google Drive y enviar correos sin configurar SMTP.
+            </p>
+            <div class="field" style="margin-bottom:12px;">
+              <label id="lbl_settings_google_client_id">Google Client ID (OAuth)</label>
+              <input id="googleClientId" placeholder="Ej: 123456-abcdef.apps.googleusercontent.com" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-primary); outline:none;" onchange="saveGoogleClientIdAction()">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <button class="btn-primary" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;" id="btnGoogleAuth" onclick="handleGoogleAuth()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                <span id="lbl_settings_google_btn">Conectar cuenta de Google</span>
+              </button>
+              <div id="googleSyncStatus" style="font-size:12px; color:var(--text-secondary); text-align:center;">
+                No conectado
+              </div>
+            </div>
+          </div>
+
+          <!-- SMTP CONFIGURACIÓN COMPLETA (COLAPSABLE) -->
+          <div class="card">
+            <button class="sidebar-btn" style="width:100%; background:none; border:none; padding:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="toggleSmtpAccordion()">
+              <span class="sidebar-btn-content">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-icon"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <span style="font-weight:700;" id="lbl_settings_smtp_title">Configuración SMTP Avanzada (Opcional)</span>
+              </span>
+              <svg id="smtpAccordionArrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.2s; transform: rotate(0deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            
+            <div id="smtpAccordionContent" style="display:none; flex-direction:column; gap:12px; margin-top:12px;">
+              <p style="font-size:11.5px; color:var(--text-secondary); line-height:1.4;" id="lbl_settings_smtp_desc">
+                Si no usas la API de Gmail, puedes ingresar tus credenciales SMTP clásicas para el envío de facturas.
+              </p>
+              <div class="grid2">
+                <div class="field"><label id="lbl_smtp_host">Servidor SMTP</label><input id="emailHost" placeholder="smtp.gmail.com"></div>
+                <div class="field"><label id="lbl_smtp_port">Puerto</label><input id="emailPort" type="number" placeholder="587"></div>
+                <div class="field"><label id="lbl_smtp_user">Usuario / Correo</label><input id="emailUser" placeholder="tu-correo@ejemplo.com"></div>
+                <div class="field"><label id="lbl_smtp_pass">Contraseña</label><input id="emailPass" type="password" placeholder="Contraseña de aplicación"></div>
+                <div class="field full"><label id="lbl_smtp_sender">Nombre Remitente</label><input id="emailSenderName" placeholder="Tu empresa o nombre"></div>
+                <div class="field full"><label id="lbl_smtp_subject">Asunto Predeterminado</label><input id="emailDefaultSubject" placeholder="Ej: Factura {numero} - {emisor}"></div>
+                <div class="field full"><label id="lbl_smtp_body">Mensaje Predeterminado</label><textarea id="emailDefaultBody" rows="3" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:12.5px; resize:vertical; outline:none;" placeholder="Usa {numero}, {emisor} y {cliente} como variables dinamicas."></textarea></div>
+              </div>
+              <div class="field-row" style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="emailSecure" style="width:auto; margin:0;">
+                <label for="emailSecure" style="margin:0; font-size:12.5px; cursor:pointer;" id="lbl_smtp_secure">Usar SSL/TLS (Puerto 465)</label>
+              </div>
+              <div class="inline-actions" style="margin-top:12px;">
+                <button class="btn-primary" style="width:100%;" onclick="saveEmailConfig()" id="lbl_smtp_save_btn">Guardar correo</button>
+                <button class="btn-secondary" style="width:100%;" onclick="testEmailConfig()" id="lbl_smtp_test_btn">Probar conexión</button>
+              </div>
+              <div class="status-msg" id="emailConfigStatus"></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+
+
+    </div>
+  </main>
+
+</div>
+
+<script src="../node_modules/html2canvas/dist/html2canvas.min.js"></script>
+<script src="../node_modules/jspdf/dist/jspdf.umd.min.js"></script>
+<script src="../node_modules/chart.js/dist/chart.umd.js"></script>
+<script src="./renderer.js"></script>
+</body>
+</html>
